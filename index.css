@@ -38,7 +38,7 @@ form {
   align-items: center;
 }
 
-input[type="text"] {
+input[type="text"], input[type="password"] {
   width: 100%;
   max-width: 400px; /* Set a maximum width for inputs */
   padding: 8px; /* Smaller padding for inputs */
@@ -47,47 +47,63 @@ input[type="text"] {
   border: 1px solid #00796B; /* Ocean blue border for inputs */
   background-color: #E0F2F1; /* Light teal background for inputs */
   color: #004D40; /* Dark teal text color */
-  font-size: 14px; 
+  font-size: 14px; /* Smaller font size for inputs */
 }
 
-input[type="text"]:focus {
-  border-color: #004D40;
+input[type="text"]:focus, input[type="password"]:focus {
+  border-color: #004D40; /* Darker teal border on focus */
   outline: none;
 }
 
-button {
+.message-form {
   width: 100%;
-  max-width: 400px;
-  padding: 10px; 
-  margin: 8px 0;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  margin-top: 10px;
+}
+
+.message-form input[type="text"] {
+  flex: 1; /* Take all available space */
+  max-width: 80%; /* Set a maximum width for the message input */
+  padding: 10px;
+  border-radius: 5px;
+  border: 1px solid #00796B; /* Ocean blue border */
+  background-color: #E0F2F1; /* Light teal background */
+  color: #004D40; /* Dark teal text color */
+  font-size: 16px; /* Consistent font size */
+  margin-right: 10px;
+}
+
+.message-form button {
+  padding: 10px 20px;
   border-radius: 5px;
   border: none;
-  background-color: #00796B;
-  color: #FFFFFF;
-  font-size: 14px;
+  background-color: #00796B; /* Ocean blue background for buttons */
+  color: #FFFFFF; /* White text color */
+  font-size: 16px; /* Consistent font size */
   cursor: pointer;
 }
 
 button:hover {
-  background-color: #004D40; 
+  background-color: #004D40; /* Darker ocean blue on hover */
 }
 
 .chat-container {
   flex: 1;
-  overflow-y: auto;
+  max-height: 400px; /* Set a specific maximum height */
+  overflow-y: auto; /* Enable vertical scrolling */
   padding: 10px;
-  border: 1px solid #00796B;
+  border: 1px solid #00796B; /* Ocean blue border for chat container */
   border-radius: 5px;
-  background-color: #F1F8E9;
-  margin-bottom: 20px;
+  background-color: #F1F8E9; /* Light greenish background for chat */
   display: flex;
   flex-direction: column;
   gap: 10px;
-  max-height: calc(80vh - 60px);
 }
 
 .chat-container p {
-  padding: 12px;
+  padding: 12px; /* Adjust padding for chat bubbles */
   border-radius: 10px;
   max-width: 70%;
   word-wrap: break-word;
@@ -117,7 +133,7 @@ button:hover {
     padding: 10px;
   }
 
-  input[type="text"], button {
+  input[type="text"], input[type="password"], .message-form input[type="text"], button {
     font-size: 12px; /* Smaller font size for smaller screens */
   }
 

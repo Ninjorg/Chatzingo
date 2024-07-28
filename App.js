@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useRef } from 'react';
 import io from 'socket.io-client';
-import './index.css';
+import './index.css'; // Make sure to add your CSS for styling
 
 const socket = io.connect('http://localhost:4000');
 
@@ -16,6 +16,7 @@ function App() {
   const [message, setMessage] = useState('');
   const [chat, setChat] = useState([]);
   const [isLoggedIn, setIsLoggedIn] = useState(false);
+  const [showLanding, setShowLanding] = useState(true); // New state for landing page
   const chatContainerRef = useRef(null);
 
   useEffect(() => {
@@ -43,6 +44,7 @@ function App() {
     const user = validUsers.find((user) => user.username === username && user.password === password);
     if (user) {
       setIsLoggedIn(true);
+      setShowLanding(false); // Hide landing page after login
     } else {
       alert('Invalid username or password');
     }
@@ -58,7 +60,21 @@ function App() {
 
   return (
     <div className="App">
-      {!isLoggedIn ? (
+      {showLanding ? (
+        <div className="landing-page">
+          <div className="banner">
+            <h1>Collabo</h1>
+          </div>
+          <div className="content">
+            <p>
+              Created by Ronit, Collabo offers a platform for students to collaborate and work on projects together. Our aim is to foster creativity and teamwork through seamless collaboration tools and resources.
+            </p>
+            <div className="button-container">
+              <button onClick={() => setShowLanding(false)}>Enter</button>
+            </div>
+          </div>
+        </div>
+      ) : !isLoggedIn ? (
         <form onSubmit={handleLogin}>
           <input
             type="text"

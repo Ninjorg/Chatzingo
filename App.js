@@ -1,25 +1,50 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import io from 'socket.io-client';
 import './index.css';
 
 const socket = io.connect('http://localhost:4000');
 
+const validUsers = [
+  { username: 'user1', password: 'pass1' },
+  { username: 'user2', password: 'pass2' },
+  { username: 'admin', password: 'admin123' },
+];
+
 function App() {
   const [username, setUsername] = useState('');
+  const [password, setPassword] = useState('');
   const [message, setMessage] = useState('');
   const [chat, setChat] = useState([]);
   const [isLoggedIn, setIsLoggedIn] = useState(false);
+  const chatContainerRef = useRef(null);
 
   useEffect(() => {
-    socket.on('message', ({ username, message }) => {
-      setChat([...chat, { username, message }]);
-    });
+    const handleMessage = ({ username, message }) => {
+      setChat((prevChat) => [...prevChat, { username, message }]);
+    };
+
+    socket.on('message', handleMessage);
+
+    // Cleanup listener on component unmount
+    return () => {
+      socket.off('message', handleMessage);
+    };
+  }, []);
+
+  useEffect(() => {
+    // Scroll to bottom when new messages are added
+    if (chatContainerRef.current) {
+      chatContainerRef.current.scrollTop = chatContainerRef.current.scrollHeight;
+    }
   }, [chat]);
 
   const handleLogin = (e) => {
     e.preventDefault();
-    if (username) {
+    const user = validUsers.find((user) => user.username === username && user.password === password);
+    if (user) {
       setIsLoggedIn(true);
+    } else {
+      alert('Invalid username or password');
     }
   };
 
@@ -42,12 +67,19 @@ function App() {
             placeholder="Enter your username..."
             required
           />
+          <input
+            type="password"
+            value={password}
+            onChange={(e) => setPassword(e.target.value)}
+            placeholder="Enter your password..."
+            required
+          />
           <button type="submit">Join Chat</button>
         </form>
       ) : (
         <div>
           <h1>Chat Room</h1>
-          <div className="chat-container">
+          <div className="chat-container" ref={chatContainerRef}>
             {chat.map((payload, index) => (
               <p
                 key={index}
@@ -57,7 +89,7 @@ function App() {
               </p>
             ))}
           </div>
-          <form onSubmit={sendMessage}>
+          <form className="message-form" onSubmit={sendMessage}>
             <input
               type="text"
               value={message}

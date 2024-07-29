@@ -13,8 +13,21 @@ const io = socketIo(server, {
 io.on('connection', (socket) => {
   console.log('New client connected');
 
-  socket.on('message', ({ username, message }) => {
-    io.emit('message', { username, message });
+  // Join a room
+  socket.on('joinRoom', (room) => {
+    socket.join(room);
+    console.log(`Client joined room: ${room}`);
+  });
+
+  // Leave a room
+  socket.on('leaveRoom', (room) => {
+    socket.leave(room);
+    console.log(`Client left room: ${room}`);
+  });
+
+  // Handle incoming messages
+  socket.on('message', ({ username, message, room }) => {
+    io.to(room).emit('message', { username, message });
   });
 
   socket.on('disconnect', () => {

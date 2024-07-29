@@ -1,9 +1,9 @@
+// App.js
 import React, { useState, useEffect, useRef } from 'react';
 import { BrowserRouter as Router, Route, Routes } from 'react-router-dom';
 import io from 'socket.io-client';
 import Navbar from './navbar';
 import './index.css';
-import EmojiPicker from 'emoji-picker-react'; // Import the emoji picker
 
 const socket = io.connect('http://localhost:4000');
 
@@ -20,9 +20,8 @@ function App() {
   const [chat, setChat] = useState([]);
   const [isLoggedIn, setIsLoggedIn] = useState(false);
   const [userPermissions, setUserPermissions] = useState([]);
-  const [showEmojiPicker, setShowEmojiPicker] = useState(false);
   const chatContainerRef = useRef(null);
-
+  
   useEffect(() => {
     const handleMessage = ({ username, message }) => {
       setChat((prevChat) => [...prevChat, { username, message }]);
@@ -60,11 +59,6 @@ function App() {
     }
   };
 
-  const handleEmojiClick = (event, emojiObject) => {
-    setMessage((prevMessage) => prevMessage + emojiObject.emoji);
-    setShowEmojiPicker(false);
-  };
-
   const ChatRoom = () => {
     return (
       <div>
@@ -87,8 +81,6 @@ function App() {
             placeholder="Type a message..."
             autoFocus
           />
-          <button type="button" onClick={() => setShowEmojiPicker(!showEmojiPicker)}>😊</button>
-          {showEmojiPicker && <EmojiPicker onEmojiClick={handleEmojiClick} />}
           <button type="submit">Send</button>
         </form>
       </div>
@@ -112,7 +104,7 @@ function App() {
                     Created by Ronit, Collabo offers a platform for students to collaborate and work on projects together. Our aim is to foster creativity and teamwork through seamless collaboration tools and resources.
                   </p>
                   <div className="button-container">
-                    <a href="/chat"><button>Home</button></a>
+                    <button><href="/chat">Home</href></button>
                   </div>
                 </div>
               </div>

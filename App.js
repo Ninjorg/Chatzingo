@@ -1,21 +1,23 @@
 // App.js
 import React, { useState, useEffect, useRef } from 'react';
-import { BrowserRouter as Router, Route, Routes, Link } from 'react-router-dom';
+import { BrowserRouter as Router, Route, Routes, Link, useNavigate } from 'react-router-dom';
 import io from 'socket.io-client';
 import Navbar from './navbar';
-import './index.css';
 import EmojiPicker from 'emoji-picker-react';
 import { v4 as uuidv4 } from 'uuid';
 import bcrypt from 'bcryptjs';
+import './index.css';
+import UserProfile from './UserProfile';
+import DirectMessages from './DirectMessages';
 
 // Connect to Socket.io server
 const socket = io.connect('http://localhost:4000');
 
-// Sample user data
+// Sample user data with more detailed profiles
 const validUsers = [
-  { username: 'user1', password: bcrypt.hashSync('pass1', 8), permissions: ['general'], profilePic: 'user1.jpg', bio: 'Hello, I am user1!' },
-  { username: 'user2', password: bcrypt.hashSync('pass2', 8), permissions: ['general'], profilePic: 'user2.jpg', bio: 'Hey there, I am user2!' },
-  { username: 'admin', password: bcrypt.hashSync('admin', 8), permissions: ['admin'], profilePic: 'admin.jpg', bio: 'Admin here, at your service!' },
+  { id: 1, username: 'user1', password: bcrypt.hashSync('pass1', 8), permissions: ['general'], profilePic: 'user1.jpg', bio: 'Hello, I am user1!', interests: 'Gaming, Music', status: 'online' },
+  { id: 2, username: 'user2', password: bcrypt.hashSync('pass2', 8), permissions: ['general'], profilePic: 'user2.jpg', bio: 'Hey there, I am user2!', interests: 'Books, Travel', status: 'offline' },
+  { id: 3, username: 'admin', password: bcrypt.hashSync('admin', 8), permissions: ['admin'], profilePic: 'admin.jpg', bio: 'Admin here, at your service!', interests: 'Tech, Sports', status: 'online' },
 ];
 
 function App() {
@@ -33,7 +35,11 @@ function App() {
   const [rooms, setRooms] = useState(['general', 'sports', 'music']);
   const [currentRoom, setCurrentRoom] = useState('general');
   const [showEmojiPicker, setShowEmojiPicker] = useState(false);
+  const [dmOpen, setDmOpen] = useState(false);
+  const [selectedUserForDM, setSelectedUserForDM] = useState(null);
+  const [file, setFile] = useState(null);
   const chatContainerRef = useRef(null);
+  const navigate = useNavigate();
 
   useEffect(() => {
     socket.on('message', ({ username, message, timestamp, room }) => {
@@ -48,11 +54,19 @@ function App() {
       }
     });
 
+    socket.on('dm', ({ fromUser, toUser, message }) => {
+      if (toUser === username) {
+        // Handle incoming direct message
+        alert(`New message from ${fromUser}: ${message}`);
+      }
+    });
+
     return () => {
       socket.off('message');
       socket.off('typing');
+      socket.off('dm');
     };
-  }, [currentRoom]);
+  }, [currentRoom, username]);
 
   useEffect(() => {
     if (chatContainerRef.current) {
@@ -66,7 +80,7 @@ function App() {
     if (user) {
       setIsLoggedIn(true);
       setUserPermissions(user.permissions);
-      setUserProfile({ username: user.username, profilePic: user.profilePic, bio: user.bio });
+      setUserProfile({ id: user.id, username: user.username, profilePic: user.profilePic, bio: user.bio, interests: user.interests });
       alert('Login successful!');
     } else {
       alert('Invalid credentials. Please try again.');
@@ -77,7 +91,7 @@ function App() {
     e.preventDefault();
     const existingUser = validUsers.find((user) => user.username === newUsername);
     if (!existingUser) {
-      validUsers.push({ username: newUsername, password: bcrypt.hashSync(newPassword, 8), permissions: ['general'], profilePic: 'default.jpg', bio: 'New user' });
+      validUsers.push({ id: uuidv4(), username: newUsername, password: bcrypt.hashSync(newPassword, 8), permissions: ['general'], profilePic: 'default.jpg', bio: 'New user', interests: '', status: 'online' });
       alert('Registration successful! Please log in.');
     } else {
       alert('Username already exists.');
@@ -94,8 +108,37 @@ function App() {
     }
   };
 
+  const sendDirectMessage = (e, toUser) => {
+    e.preventDefault();
+    if (message.trim()) {
+      socket.emit('dm', { fromUser: username, toUser, message });
+      setMessage('');
+      setSelectedUserForDM(null);
+      setDmOpen(false);
+    }
+  };
+
   const handleTyping = () => {
     socket.emit('typing', { username, room: currentRoom });
+  };
+
+  const handleFileUpload = (e) => {
+    const uploadedFile = e.target.files[0];
+    if (uploadedFile) {
+      setFile(URL.createObjectURL(uploadedFile));
+    }
+  };
+
+  const UserProfilePage = () => {
+    return (
+      <UserProfile profile={userProfile} />
+    );
+  };
+
+  const DirectMessagesPage = () => {
+    return (
+      <DirectMessages users={validUsers} onSelectUser={(user) => { setSelectedUserForDM(user); setDmOpen(true); }} />
+    );
   };
 
   const ChatRoom = () => {
@@ -122,6 +165,8 @@ function App() {
             placeholder="Type a message..."
             autoFocus
           />
+          <input type="file" onChange={handleFileUpload} />
+          {file && <img src={file} alt="Preview" className="image-preview" />}
           <button type="button" onClick={() => setShowEmojiPicker(!showEmojiPicker)}>😊</button>
           <button type="submit">Send</button>
           {showEmojiPicker && <EmojiPicker onEmojiClick={(e, emoji) => setMessage(message + emoji.emoji)} />}
@@ -158,64 +203,47 @@ function App() {
             path="/chat"
             element={
               !isLoggedIn ? (
-                <div className="auth-forms">
-                  <form onSubmit={handleLogin} className="login-form">
-                    <h2>Login</h2>
+                <div className="auth-page">
+                  <form onSubmit={handleLogin}>
                     <input
                       type="text"
                       value={username}
                       onChange={(e) => setUsername(e.target.value)}
-                      placeholder="Username"
+                      placeholder="Enter your username..."
                       required
                     />
                     <input
                       type="password"
                       value={password}
                       onChange={(e) => setPassword(e.target.value)}
-                      placeholder="Password"
+                      placeholder="Enter your password..."
                       required
                     />
                     <button type="submit">Login</button>
-                    <p>Don't have an account? <Link to="/register">Register</Link></p>
                   </form>
-                  <form onSubmit={handleRegister} className="register-form">
-                    <h2>Register</h2>
-                    <input
-                      type="text"
-                      value={newUsername}
-                      onChange={(e) => setNewUsername(e.target.value)}
-                      placeholder="New Username"
-                      required
-                    />
-                    <input
-                      type="password"
-                      value={newPassword}
-                      onChange={(e) => setNewPassword(e.target.value)}
-                      placeholder="New Password"
-                      required
-                    />
-                    <button type="submit">Register</button>
-                  </form>
+                  <div>
+                    <h2>New here? Register now!</h2>
+                    <form onSubmit={handleRegister}>
+                      <input
+                        type="text"
+                        value={newUsername}
+                        onChange={(e) => setNewUsername(e.target.value)}
+                        placeholder="Choose a username..."
+                        required
+                      />
+                      <input
+                        type="password"
+                        value={newPassword}
+                        onChange={(e) => setNewPassword(e.target.value)}
+                        placeholder="Choose a password..."
+                        required
+                      />
+                      <button type="submit">Register</button>
+                    </form>
+                  </div>
                 </div>
               ) : (
-                <div>
-                  <div className="room-selector">
-                    {rooms.map((room) => (
-                      <button
-                        key={room}
-                        className={room === currentRoom ? 'active-room' : ''}
-                        onClick={() => {
-                          setCurrentRoom(room);
-                          setChat([]);
-                          socket.emit('joinRoom', room);
-                        }}
-                      >
-                        {room}
-                      </button>
-                    ))}
-                  </div>
-                  <ChatRoom />
-                </div>
+                <ChatRoom />
               )
             }
           />
@@ -225,10 +253,18 @@ function App() {
               <div className="about-page">
                 <h1>About Collabo</h1>
                 <p>
-                  Collabo is designed for students to work together on projects and ideas. We provide a platform to connect and collaborate seamlessly. Join us and be part of the collaborative community!
+                  Collabo is a cutting-edge platform for student collaboration. With features like real-time chat, file sharing, and customizable profiles, we're here to support your academic and creative projects.
                 </p>
               </div>
             }
+          />
+          <Route
+            path="/profile"
+            element={<UserProfilePage />}
+          />
+          <Route
+            path="/direct-messages"
+            element={<DirectMessagesPage />}
           />
         </Routes>
       </div>

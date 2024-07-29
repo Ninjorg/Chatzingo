@@ -1,6 +1,5 @@
-// App.js
 import React, { useState, useEffect, useRef } from 'react';
-import { BrowserRouter as Router, Route, Routes, useNavigate } from 'react-router-dom';
+import { BrowserRouter as Router, Route, Routes } from 'react-router-dom';
 import io from 'socket.io-client';
 import Navbar from './navbar';
 import './index.css';
@@ -8,9 +7,9 @@ import './index.css';
 const socket = io.connect('http://localhost:4000');
 
 const validUsers = [
-  { username: 'user1', password: 'pass1', permissions: ['chat', 'chat2'] },
-  { username: 'user2', password: 'pass2', permissions: ['chat'] },
-  { username: 'admin', password: 'pass1', permissions: ['chat', 'chat2', 'chat3'] },
+  { username: 'user1', password: 'pass1', permissions: ['general'] },
+  { username: 'user2', password: 'pass2', permissions: ['general'] },
+  { username: 'admin', password: 'pass1', permissions: ['general'] },
 ];
 
 function App() {
@@ -23,14 +22,12 @@ function App() {
   const chatContainerRef = useRef(null);
 
   useEffect(() => {
-    const handleMessage = ({ username, message }) => {
-      setChat((prevChat) => [...prevChat, { username, message }]);
-    };
-
-    socket.on('message', handleMessage);
+    socket.on('message', ({ username, message, private: isPrivate }) => {
+      setChat((prevChat) => [...prevChat, { username, message, isPrivate }]);
+    });
 
     return () => {
-      socket.off('message', handleMessage);
+      socket.off('message');
     };
   }, []);
 
@@ -44,6 +41,7 @@ function App() {
     e.preventDefault();
     const user = validUsers.find((user) => user.username === username && user.password === password);
     if (user) {
+      socket.emit('setUsername', username); // Notify the server of the username
       setIsLoggedIn(true);
       setUserPermissions(user.permissions);
     } else {
@@ -59,23 +57,16 @@ function App() {
     }
   };
 
-  const ChatRoom = ({ room }) => {
-    const navigate = useNavigate();
-
-    useEffect(() => {
-      if (!userPermissions.includes(room)) {
-        navigate('/chat');
-      }
-    }, [room, navigate]);
-
+  const ChatRoom = () => {
     return (
       <div>
-        <h1>Chat Room {room.charAt(room.length - 1)}</h1>
+        <h1>General Chat Room</h1>
         <div className="chat-container" ref={chatContainerRef}>
           {chat.map((payload, index) => (
             <p
               key={index}
               className={payload.username === username ? 'user-message' : 'other-message'}
+              style={{ color: payload.isPrivate ? 'red' : 'inherit' }}
             >
               <strong>{payload.username}:</strong> {payload.message}
             </p>
@@ -112,7 +103,7 @@ function App() {
                     Created by Ronit, Collabo offers a platform for students to collaborate and work on projects together. Our aim is to foster creativity and teamwork through seamless collaboration tools and resources.
                   </p>
                   <div className="button-container">
-                    <button onClick={() => setIsLoggedIn(true)}>Enter</button>
+                    <a href="/chat"><button>Enter</button></a>
                   </div>
                 </div>
               </div>
@@ -140,59 +131,7 @@ function App() {
                   <button type="submit">Join Chat</button>
                 </form>
               ) : (
-                <ChatRoom room="chat" />
-              )
-            }
-          />
-          <Route
-            path="/chat2"
-            element={
-              !isLoggedIn ? (
-                <form onSubmit={handleLogin}>
-                  <input
-                    type="text"
-                    value={username}
-                    onChange={(e) => setUsername(e.target.value)}
-                    placeholder="Enter your username..."
-                    required
-                  />
-                  <input
-                    type="password"
-                    value={password}
-                    onChange={(e) => setPassword(e.target.value)}
-                    placeholder="Enter your password..."
-                    required
-                  />
-                  <button type="submit">Join Chat</button>
-                </form>
-              ) : (
-                <ChatRoom room="chat2" />
-              )
-            }
-          />
-          <Route
-            path="/chat3"
-            element={
-              !isLoggedIn ? (
-                <form onSubmit={handleLogin}>
-                  <input
-                    type="text"
-                    value={username}
-                    onChange={(e) => setUsername(e.target.value)}
-                    placeholder="Enter your username..."
-                    required
-                  />
-                  <input
-                    type="password"
-                    value={password}
-                    onChange={(e) => setPassword(e.target.value)}
-                    placeholder="Enter your password..."
-                    required
-                  />
-                  <button type="submit">Join Chat</button>
-                </form>
-              ) : (
-                <ChatRoom room="chat3" />
+                <ChatRoom />
               )
             }
           />

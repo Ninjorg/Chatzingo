@@ -1,3 +1,4 @@
+/* General Styles */
 body, html {
   margin: 0;
   padding: 0;
@@ -12,6 +13,7 @@ body, html {
   align-items: center;
 }
 
+/* App Container */
 .App {
   height: 80vh; /* Fixed height for the chat room */
   width: 80vw;  /* Fixed width for the chat room */
@@ -25,13 +27,55 @@ body, html {
   flex-direction: column;
 }
 
-h1 {
-  font-size: 24px; /* Slightly smaller font size for better proportion */
-  margin-bottom: 20px;
+/* Landing Page Styles */
+.landing-page {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
   text-align: center;
-  color: #00796B; /* Ocean blue color for header */
+  background-color: #F1F8E9; /* Light greenish background */
+  padding: 50px;
+  border-radius: 10px;
 }
 
+.banner {
+  background-color: #00796B; /* Ocean blue background */
+  width: 100%;
+  padding: 20px;
+  border-radius: 10px 10px 0 0;
+}
+
+.banner h1 {
+  margin: 0;
+  color: #FFFFFF; /* White text */
+}
+
+.content {
+  margin-top: 20px;
+}
+
+.button-container {
+  margin-top: 20px;
+}
+
+button {
+  padding: 10px 20px;
+  border-radius: 10px;
+  border: none;
+  background-color: #00796B; /* Ocean blue background for buttons */
+  color: #FFFFFF; /* White text color */
+  font-size: 16px; /* Consistent font size */
+  cursor: pointer;
+}
+
+button:hover {
+  background-color: #004D40; /* Darker ocean blue on hover */
+  transform: scale(1.2);
+  transition: transform 0.3s, background-color 0.3s;
+}
+
+
+/* Form and Input Styles */
 form {
   display: flex;
   flex-direction: column;
@@ -90,11 +134,13 @@ button:hover {
 }
 
 .chat-container {
-  flex: 1;
+  /* flex: 1; */
   max-height: 400px; /* Set a specific maximum height */
+  height: 500;
+  width: 500;
   overflow-y: auto; /* Enable vertical scrolling */
   padding: 10px;
-  border: 1px solid #00796B; /* Ocean blue border for chat container */
+  border: 2px solid #00796B; /* Ocean blue border for chat container */
   border-radius: 5px;
   background-color: #F1F8E9; /* Light greenish background for chat */
   display: flex;
@@ -106,6 +152,8 @@ button:hover {
   padding: 12px; /* Adjust padding for chat bubbles */
   border-radius: 10px;
   max-width: 70%;
+  height: 40;
+  width: 80;
   word-wrap: break-word;
   margin: 0;
 }
@@ -126,6 +174,7 @@ button:hover {
   color: #004D40; /* Dark teal color for usernames */
 }
 
+/* Responsive Styles */
 @media (max-width: 600px) {
   .App {
     height: 90vh; /* Adjust height for smaller screens */

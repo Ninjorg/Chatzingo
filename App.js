@@ -8,7 +8,7 @@ import './index.css';
 const socket = io.connect('http://localhost:4000');
 
 const validUsers = [
-  { username: 'Ninjorg', password: 'p' },
+  { username: 'user1', password: 'pass1' },
   { username: 'user2', password: 'pass2' },
   { username: 'admin', password: 'admin123' },
 ];
@@ -20,19 +20,27 @@ function App() {
   const [chat, setChat] = useState([]);
   const [isLoggedIn, setIsLoggedIn] = useState(false);
   const [showLanding, setShowLanding] = useState(true);
+  const [currentRoom, setCurrentRoom] = useState('General');
   const chatContainerRef = useRef(null);
 
+  const rooms = ['General', 'Room1', 'Room2', 'Room3', 'Room4', 'Room5', 'Room6', 'Room7', 'Room8', 'Room9', 'Room10'];
+
   useEffect(() => {
-    const handleMessage = ({ username, message }) => {
-      setChat((prevChat) => [...prevChat, { username, message }]);
+    socket.emit('joinRoom', currentRoom);
+
+    const handleMessage = ({ username, message, room }) => {
+      if (room === currentRoom) {
+        setChat((prevChat) => [...prevChat, { username, message }]);
+      }
     };
 
     socket.on('message', handleMessage);
 
     return () => {
+      socket.emit('leaveRoom', currentRoom);
       socket.off('message', handleMessage);
     };
-  }, []);
+  }, [currentRoom]);
 
   useEffect(() => {
     if (chatContainerRef.current) {
@@ -47,16 +55,23 @@ function App() {
       setIsLoggedIn(true);
       setShowLanding(false);
     } else {
-      alert('Invalid username or password');
+      alert('Not registered: Please contact Ronit Parikh to get this issue resolved.');
     }
   };
 
   const sendMessage = (e) => {
     e.preventDefault();
     if (message) {
-      socket.emit('message', { username, message });
+      socket.emit('message', { username, message, room: currentRoom });
       setMessage('');
     }
+  };
+
+  const handleRoomChange = (room) => {
+    socket.emit('leaveRoom', currentRoom);
+    setCurrentRoom(room);
+    setChat([]); // Clear chat on room change
+    socket.emit('joinRoom', room);
   };
 
   return (
@@ -69,7 +84,7 @@ function App() {
             element={
               <div className="landing-page">
                 <div className="banner">
-                  <h1>Collabo</h1>
+                  <h1>What is Collabo</h1>
                 </div>
                 <div className="content">
                   <p>
@@ -105,7 +120,14 @@ function App() {
                 </form>
               ) : (
                 <div>
-                  <h1>Chat Room</h1>
+                  <h1>Chat Room - {currentRoom}</h1>
+                  <div className="room-selector">
+                    {rooms.map((room) => (
+                      <button key={room} onClick={() => handleRoomChange(room)}>
+                        {room}
+                      </button>
+                    ))}
+                  </div>
                   <div className="chat-container" ref={chatContainerRef}>
                     {chat.map((payload, index) => (
                       <p

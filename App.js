@@ -28,6 +28,7 @@ function App() {
  const [selectedUser, setSelectedUser] = useState(null);
  const [onlineUsers, setOnlineUsers] = useState([]);
  const chatContainerRef = useRef(null);
+ const hashtag = '#';
 
 
  useEffect(() => {
@@ -100,14 +101,24 @@ function App() {
        <div className="sidebar">
          <h2>YOUR CHANNELS:</h2>
          <ul>
-           <li onClick={() => setSelectedUser(null)}>
+           <li
+             onClick={() => setSelectedUser(null)}
+             className={!selectedUser ? 'active' : ''}
+           >
              #General Chat {onlineUsers.includes('General Chat') && <span className="green-dot"></span>}
            </li>
            {validUsers
              .filter(user => user.username !== username)
              .map((user, index) => (
-               <li key={index} onClick={() => setSelectedUser(user.username)}>
-                 {user.username} {onlineUsers.includes(user.username) && <span className="green-dot"></span>}
+               <li
+                 key={index}
+                 onClick={() => setSelectedUser(user.username)}
+                 className={selectedUser === user.username ? 'active' : ''}
+               >
+                 {hashtag + user.username}
+                 {onlineUsers.includes(user.username) && (
+                   <span className="green-dot"></span>
+                 )}
                </li>
              ))}
          </ul>

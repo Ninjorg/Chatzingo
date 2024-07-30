@@ -1,7 +1,9 @@
 const express = require('express');
 const http = require('http');
 const socketIo = require('socket.io');
-
+const { Pool } = require('pg');
+const bcrypt = require('bcrypt'); // For password hashing
+const jwt = require('jsonwebtoken'); // For token-based authentication
 const app = express();
 const server = http.createServer(app);
 const io = socketIo(server, {
@@ -10,73 +12,139 @@ const io = socketIo(server, {
   }
 });
 
-let users = {}; // Store users and their corresponding socket IDs
-let messageHistory = {}; // Store message history for rooms
+// PostgreSQL client setup (adjust with your config)
+const pool = new Pool({
+  user: 'yourUsername',
+  host: 'localhost',
+  database: 'yourDatabase',
+  password: 'yourPassword',
+  port: 5432,
+});
+
+let activeUsers = [];
+
+// Middleware to parse JSON requests
+app.use(express.json());
+
+// Secret for JWT
+const JWT_SECRET = 'your_secret_key';
+
+// User registration
+app.post('/register', async (req, res) => {
+  const { username, password } = req.body;
+  const hashedPassword = await bcrypt.hash(password, 10);
+
+  try {
+    await pool.query('INSERT INTO users (username, password) VALUES ($1, $2)', [username, hashedPassword]);
+    res.status(201).send('User registered');
+  } catch (error) {
+    console.error('Error registering user:', error);
+    res.status(500).send('Error registering user');
+  }
+});
+
+// User login
+app.post('/login', async (req, res) => {
+  const { username, password } = req.body;
+
+  try {
+    const result = await pool.query('SELECT * FROM users WHERE username = $1', [username]);
+    const user = result.rows[0];
+
+    if (user && await bcrypt.compare(password, user.password)) {
+      const token = jwt.sign({ username }, JWT_SECRET, { expiresIn: '1h' });
+      res.json({ token });
+    } else {
+      res.status(401).send('Invalid credentials');
+    }
+  } catch (error) {
+    console.error('Error during login:', error);
+    res.status(500).send('Error during login');
+  }
+});
+
+// Middleware for token authentication
+const authenticate = (req, res, next) => {
+  const token = req.headers['authorization'];
+
+  if (!token) {
+    return res.status(403).send('Token required');
+  }
+
+  jwt.verify(token, JWT_SECRET, (err, decoded) => {
+    if (err) {
+      return res.status(401).send('Invalid token');
+    }
+    req.user = decoded;
+    next();
+  });
+};
 
 io.on('connection', (socket) => {
   console.log('New client connected');
 
-  socket.on('join', ({ username, room }) => {
-    if (!username || !room) {
-      socket.emit('error', { message: 'Username and room are required' });
-      return;
+  // Handle message event
+  socket.on('message', async ({ username, message, recipient, type, room }) => {
+    const timestamp = new Date().toISOString();
+    const messageData = { username, message, recipient, type, timestamp };
+
+    try {
+      if (room) {
+        // Send message to a specific room
+        socket.to(room).emit('message', messageData);
+      } else if (recipient) {
+        // Send message to a specific user
+        const recipientSocket = Array.from(io.sockets.sockets.values()).find(
+          (s) => s.username === recipient
+        );
+        const senderSocket = Array.from(io.sockets.sockets.values()).find(
+          (s) => s.username === username
+        );
+
+        if (recipientSocket) {
+          recipientSocket.emit('message', messageData);
+        }
+        if (senderSocket) {
+          senderSocket.emit('message', messageData);
+        }
+      } else {
+        // Broadcast public messages to all connected clients
+        io.emit('message', messageData);
+      }
+
+      // Store the message in the database
+      await pool.query('INSERT INTO messages (username, message, recipient, type, timestamp) VALUES ($1, $2, $3, $4, $5)', [username, message, recipient, type, timestamp]);
+    } catch (error) {
+      console.error('Error storing message:', error);
     }
+  });
+
+  // Register a new user
+  socket.on('register', (username) => {
+    socket.username = username;
+    if (!activeUsers.includes(username)) {
+      activeUsers.push(username);
+      io.emit('activeUsers', activeUsers);
+    }
+  });
+
+  // Join a room
+  socket.on('joinRoom', (room) => {
     socket.join(room);
-    users[socket.id] = { username, room };
-    messageHistory[room] = messageHistory[room] || [];
-
-    // Emit previous messages
-    socket.emit('messageHistory', messageHistory[room]);
-
-    // Notify room of new user
-    io.to(room).emit('message', { username: 'Admin', message: `${username} has joined the room.` });
-
-    console.log(`${username} joined room ${room}`);
+    console.log(`${socket.username} joined room ${room}`);
   });
 
-  socket.on('message', ({ message }) => {
-    const user = users[socket.id];
-    if (!user) {
-      socket.emit('error', { message: 'User not found' });
-      return;
-    }
-    const { username, room } = user;
-
-    // Save message to history
-    const fullMessage = { username, message, timestamp: new Date() };
-    messageHistory[room] = messageHistory[room] || [];
-    messageHistory[room].push(fullMessage);
-
-    io.to(room).emit('message', fullMessage);
+  // Leave a room
+  socket.on('leaveRoom', (room) => {
+    socket.leave(room);
+    console.log(`${socket.username} left room ${room}`);
   });
 
-  socket.on('privateMessage', ({ toUsername, message }) => {
-    const fromUser = users[socket.id];
-    if (!fromUser) {
-      socket.emit('error', { message: 'User not found' });
-      return;
-    }
-
-    const toUserSocketId = Object.keys(users).find(
-      (key) => users[key].username === toUsername
-    );
-
-    if (toUserSocketId) {
-      const { username: fromUsername } = fromUser;
-      io.to(toUserSocketId).emit('privateMessage', { fromUsername, message });
-    } else {
-      socket.emit('error', { message: 'Recipient not found' });
-    }
-  });
-
+  // Handle user disconnection
   socket.on('disconnect', () => {
-    const user = users[socket.id];
-    if (user) {
-      const { username, room } = user;
-      io.to(room).emit('message', { username: 'Admin', message: `${username} has left the room.` });
-      delete users[socket.id];
-      console.log(`${username} disconnected from room ${room}`);
-    }
+    console.log('Client disconnected');
+    activeUsers = activeUsers.filter((user) => user !== socket.username);
+    io.emit('activeUsers', activeUsers);
   });
 });
 

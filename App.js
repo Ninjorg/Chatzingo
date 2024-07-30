@@ -28,7 +28,6 @@ function App() {
  const [selectedUser, setSelectedUser] = useState(null);
  const [onlineUsers, setOnlineUsers] = useState([]);
  const chatContainerRef = useRef(null);
- const hashtag = '#';
 
 
  useEffect(() => {
@@ -76,7 +75,7 @@ function App() {
  const sendMessage = (e) => {
    e.preventDefault();
    if (message.trim()) {
-     const recipient = message.startsWith('@') ? message.split(' ')[0].slice(1) : selectedUser;
+     const recipient = selectedUser || null;
      socket.emit('message', { username, message, recipient });
      setMessage('');
    }
@@ -115,7 +114,7 @@ function App() {
                  onClick={() => setSelectedUser(user.username)}
                  className={selectedUser === user.username ? 'active' : ''}
                >
-                 {hashtag + user.username}
+                 @{user.username}
                  {onlineUsers.includes(user.username) && (
                    <span className="green-dot"></span>
                  )}

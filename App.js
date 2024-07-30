@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef } from 'react'; 
+import React, { useState, useEffect, useRef } from 'react';
 import { BrowserRouter as Router, Route, Routes } from 'react-router-dom';
 import io from 'socket.io-client';
 import Navbar from './navbar';
@@ -24,23 +24,29 @@ function App() {
  const [isLoggedIn, setIsLoggedIn] = useState(false);
  const [userPermissions, setUserPermissions] = useState([]);
  const [selectedUser, setSelectedUser] = useState(null);
- const [activeUsers, setActiveUsers] = useState([]); // New state for active users
+ const [activeUsers, setActiveUsers] = useState([]);
  const chatContainerRef = useRef(null);
  const hashtag = '#';
-  useEffect(() => {
-   socket.on('message', ({ username, message, recipient }) => {
+
+
+ useEffect(() => {
+   const handleMessage = ({ username, message, recipient }) => {
      setChat((prevChat) => [...prevChat, { username, message, recipient }]);
-   });
+   };
 
 
-   socket.on('activeUsers', (users) => {
+   const handleActiveUsers = (users) => {
      setActiveUsers(users);
-   });
+   };
+
+
+   socket.on('message', handleMessage);
+   socket.on('activeUsers', handleActiveUsers);
 
 
    return () => {
-     socket.off('message');
-     socket.off('activeUsers');
+     socket.off('message', handleMessage);
+     socket.off('activeUsers', handleActiveUsers);
    };
  }, []);
 
@@ -94,13 +100,16 @@ function App() {
          <h2>YOUR CHANNELS:</h2>
          <ul>
            <li onClick={() => setSelectedUser(null)}>
-             #General Chat {activeUsers.includes('general') ? ' (Active)' : ''}
+             #General Chat
            </li>
            {validUsers
              .filter(user => user.username !== username)
              .map((user, index) => (
                <li key={index} onClick={() => setSelectedUser(user.username)}>
-                 {hashtag + user.username} {activeUsers.includes(user.username) ? ' (Active)' : ''}
+                 {hashtag + user.username}
+                 {activeUsers.includes(user.username) && (
+                   <span className="green-dot"></span>
+                 )}
                </li>
              ))}
          </ul>

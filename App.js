@@ -1,3 +1,5 @@
+
+
 import React, { useState, useEffect, useRef } from 'react';
 import { BrowserRouter as Router, Route, Routes } from 'react-router-dom';
 import io from 'socket.io-client';
@@ -24,9 +26,8 @@ function App() {
  const [isLoggedIn, setIsLoggedIn] = useState(false);
  const [userPermissions, setUserPermissions] = useState([]);
  const [selectedUser, setSelectedUser] = useState(null);
- const [activeUsers, setActiveUsers] = useState([]);
+ const [onlineUsers, setOnlineUsers] = useState([]);
  const chatContainerRef = useRef(null);
- const hashtag = '#';
 
 
  useEffect(() => {
@@ -35,18 +36,18 @@ function App() {
    };
 
 
-   const handleActiveUsers = (users) => {
-     setActiveUsers(users);
+   const handleUserUpdate = (users) => {
+     setOnlineUsers(users);
    };
 
 
    socket.on('message', handleMessage);
-   socket.on('activeUsers', handleActiveUsers);
+   socket.on('user-update', handleUserUpdate);
 
 
    return () => {
      socket.off('message', handleMessage);
-     socket.off('activeUsers', handleActiveUsers);
+     socket.off('user-update', handleUserUpdate);
    };
  }, []);
 
@@ -74,9 +75,7 @@ function App() {
  const sendMessage = (e) => {
    e.preventDefault();
    if (message.trim()) {
-     const recipient = message.startsWith('@')
-       ? message.split(' ')[0].slice(1)
-       : selectedUser;
+     const recipient = message.startsWith('@') ? message.split(' ')[0].slice(1) : selectedUser;
      socket.emit('message', { username, message, recipient });
      setMessage('');
    }
@@ -86,10 +85,12 @@ function App() {
  const ChatRoom = () => {
    const filteredChat = chat.filter(({ username: msgUsername, recipient }) => {
      if (selectedUser) {
-       return (msgUsername === username && recipient === selectedUser) ||
-              (recipient === username && msgUsername === selectedUser);
+       return (
+         (msgUsername === username && recipient === selectedUser) ||
+         (recipient === username && msgUsername === selectedUser)
+       );
      } else {
-       return !recipient || recipient === username || msgUsername === username;
+       return !recipient;
      }
    });
 
@@ -100,16 +101,13 @@ function App() {
          <h2>YOUR CHANNELS:</h2>
          <ul>
            <li onClick={() => setSelectedUser(null)}>
-             #General Chat
+             #General Chat {onlineUsers.includes('General Chat') && <span className="green-dot"></span>}
            </li>
            {validUsers
              .filter(user => user.username !== username)
              .map((user, index) => (
                <li key={index} onClick={() => setSelectedUser(user.username)}>
-                 {hashtag + user.username}
-                 {activeUsers.includes(user.username) && (
-                   <span className="green-dot"></span>
-                 )}
+                 {user.username} {onlineUsers.includes(user.username) && <span className="green-dot"></span>}
                </li>
              ))}
          </ul>

@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { BrowserRouter as Router, Route, Routes, Link } from 'react-router-dom';
+import { BrowserRouter as Router, Route, Routes } from 'react-router-dom';
 import io from 'socket.io-client';
 import Navbar from './navbar';
 import './index.css';
@@ -9,8 +9,8 @@ const socket = io.connect('http://localhost:4000');
 const validUsers = [
   { username: 'user1', password: 'pass1', permissions: ['general'] },
   { username: 'user2', password: 'pass2', permissions: ['general'] },
-  { username: 'admin', password: 'pass1', permissions: ['general', 'admin'] },
-  { username: 'admin2', password: 'pass1', permissions: ['general', 'admin'] },
+  { username: 'admin', password: 'pass1', permissions: ['general'] },
+  { username: 'admin2', password: 'pass1', permissions: ['general'] },
 ];
 
 function App() {
@@ -23,14 +23,13 @@ function App() {
   const [selectedUser, setSelectedUser] = useState(null);
   const [onlineUsers, setOnlineUsers] = useState([]);
   const [unreadMessages, setUnreadMessages] = useState({});
-  const [typingUsers, setTypingUsers] = useState([]);
-  const [darkMode, setDarkMode] = useState(false);
   const chatContainerRef = useRef(null);
 
   useEffect(() => {
     const handleMessage = ({ username, message, recipient, type }) => {
       setChat((prevChat) => [...prevChat, { username, message, recipient, type }]);
 
+      // Update unread messages count
       if (recipient !== username) {
         setUnreadMessages((prevUnreadMessages) => ({
           ...prevUnreadMessages,
@@ -43,24 +42,12 @@ function App() {
       setOnlineUsers(users);
     };
 
-    const handleTyping = ({ username, isTyping }) => {
-      setTypingUsers((prevTypingUsers) => {
-        if (isTyping) {
-          return [...prevTypingUsers, username];
-        } else {
-          return prevTypingUsers.filter((user) => user !== username);
-        }
-      });
-    };
-
     socket.on('message', handleMessage);
     socket.on('activeUsers', handleUserUpdate);
-    socket.on('typing', handleTyping);
 
     return () => {
       socket.off('message', handleMessage);
       socket.off('activeUsers', handleUserUpdate);
-      socket.off('typing', handleTyping);
     };
   }, [username]);
 
@@ -78,7 +65,7 @@ function App() {
       setUserPermissions(user.permissions);
       socket.emit('register', username);
     } else {
-      alert('Invalid credentials. Please try again.');
+      alert('Not registered: Please contact Ronit Parikh to get this issue resolved.');
     }
   };
 
@@ -88,6 +75,7 @@ function App() {
       const recipient = selectedUser || null;
       socket.emit('message', { username, message, recipient, type: 'text' });
       setMessage('');
+      // Reset unread messages for the selected user
       if (recipient && unreadMessages[recipient]) {
         setUnreadMessages((prevUnreadMessages) => ({
           ...prevUnreadMessages,
@@ -106,7 +94,7 @@ function App() {
         img.src = e.target.result;
         img.onload = () => {
           const canvas = document.createElement('canvas');
-          const maxSize = 300;
+          const maxSize = 300; // Adjusted max size
           let width = img.width;
           let height = img.height;
 
@@ -148,9 +136,9 @@ function App() {
     });
 
     return (
-      <div className={`chat-room ${darkMode ? 'dark-mode' : ''}`}>
+      <div style={{ display: 'flex' }}>
         <div className="sidebar">
-          <h2>Your Channels</h2>
+          <h2>YOUR CHANNELS:</h2>
           <ul>
             <li
               onClick={() => setSelectedUser(null)}
@@ -178,73 +166,58 @@ function App() {
         </div>
         <div className="chat-container" ref={chatContainerRef}>
           <h1>{selectedUser ? `Chat with ${selectedUser}` : 'General Chat Room'}</h1>
-          {typingUsers.length > 0 && (
-            <div className="typing-indicator">
-              {typingUsers.join(', ')} {typingUsers.length > 1 ? 'are' : 'is'} typing...
-            </div>
-          )}
           {filteredChat.map((payload, index) => (
-            <div key={index} className="message">
-              <div className={`message-content ${payload.username === username ? 'user-message' : 'other-message'}`}>
-                {payload.type === 'image' ? (
-                  <img src={payload.message} alt="Chat image" style={{ maxWidth: '600px', maxHeight: '600px' }} />
-                ) : (
-                  <>
-                    <strong>{payload.username}:</strong> {payload.message}
-                  </>
-                )}
-              </div>
-              <div className="message-reactions">
-                <span role="img" aria-label="like" onClick={() => handleReaction(payload, '👍')}>👍</span>
-                <span role="img" aria-label="love" onClick={() => handleReaction(payload, '❤️')}>❤️</span>
-                <span role="img" aria-label="laugh" onClick={() => handleReaction(payload, '😂')}>😂</span>
-                {/* Add more reactions as needed */}
-              </div>
-            </div>
+            <p
+              key={index}
+              className={
+                payload.username === username ? 'user-message' : 'other-message'
+              }
+            >
+              {payload.type === 'image' ? (
+                <img src={payload.message} alt="Chat image" style={{ maxWidth: '600px', maxHeight: '600px' }} />
+              ) : (
+                <>
+                  <strong>{payload.username}:</strong> {payload.message}
+                </>
+              )}
+            </p>
           ))}
           <form className="message-form" onSubmit={sendMessage}>
-            <input
-              type="text"
-              value={message}
-              onChange={(e) => setMessage(e.target.value)}
-              placeholder="Type a message..."
-              onFocus={() => socket.emit('typing', { username, isTyping: true })}
-              onBlur={() => socket.emit('typing', { username, isTyping: false })}
-              autoFocus
-            />
+            <div>
+              
+            </div>
+              <input
+                type="text"
+                value={message}
+                onChange={(e) => setMessage(e.target.value)}
+                placeholder="Type a message..."
+                autoFocus
+              />
             <input type="file" accept="image/*" onChange={handleImageUpload} />
-            <button type="submit">Send</button>
           </form>
         </div>
       </div>
     );
   };
 
-  const handleReaction = (payload, reaction) => {
-    socket.emit('reaction', { username, reaction, message: payload });
-  };
-
   return (
     <Router>
       <Navbar />
-      <div className={`App ${darkMode ? 'dark-mode' : ''}`}>
-        <button onClick={() => setDarkMode(!darkMode)} className="dark-mode-toggle">
-          {darkMode ? 'Switch to Light Mode' : 'Switch to Dark Mode'}
-        </button>
+      <div className="App">
         <Routes>
           <Route
             path="/"
             element={
               <div className="landing-page">
                 <div className="banner">
-                  <h1>What is Collabo?</h1>
+                  <h1>What is Collabo</h1>
                 </div>
                 <div className="content">
                   <p>
                     Created by Ronit, Collabo offers a platform for students to collaborate and work on projects together. Our aim is to foster creativity and teamwork through seamless collaboration tools and resources.
                   </p>
                   <div className="button-container">
-                    <Link to="/chat"><button>Join Chat</button></Link>
+                    <a href="/chat"><button>Home</button></a>
                   </div>
                 </div>
               </div>
@@ -254,7 +227,7 @@ function App() {
             path="/chat"
             element={
               !isLoggedIn ? (
-                <form onSubmit={handleLogin} className="login-form">
+                <form onSubmit={handleLogin}>
                   <input
                     type="text"
                     value={username}
@@ -265,4 +238,32 @@ function App() {
                   <input
                     type="password"
                     value={password}
-                    onChange={(e)
+                    onChange={(e) => setPassword(e.target.value)}
+                    placeholder="Enter your password..."
+                    required
+                  />
+                  <button type="submit">Join Chat</button>
+                </form>
+              ) : (
+                <ChatRoom />
+              )
+            }
+          />
+          <Route
+            path="/about"
+            element={
+              <div className="about-page">
+                <h1>About Collabo</h1>
+                <p>
+                  Collabo is a platform designed to help students collaborate on projects and ideas. Whether you're working on a school project, a startup idea, or just want to brainstorm with others, Collabo provides the tools and community to make it happen.
+                </p>
+              </div>
+            }
+          />
+        </Routes>
+      </div>
+    </Router>
+  );
+}
+
+export default App;

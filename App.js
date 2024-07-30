@@ -1,5 +1,6 @@
 
 
+
 import React, { useState, useEffect, useRef } from 'react';
 import { BrowserRouter as Router, Route, Routes } from 'react-router-dom';
 import io from 'socket.io-client';
@@ -134,16 +135,16 @@ function App() {
              <strong>{payload.username}:</strong> {payload.message}
            </p>
          ))}
-         <form className="message-form" onSubmit={sendMessage}>
-           <input
-             type="text"
-             value={message}
-             onChange={(e) => setMessage(e.target.value)}
-             placeholder="Type a message..."
-             autoFocus
-           />
-           <button type="submit">Send</button>
-         </form>
+       <form className="message-form" onSubmit={sendMessage}>
+         <input
+           type="text"
+           value={message}
+           onChange={(e) => setMessage(e.target.value)}
+           placeholder="Type a message..."
+           autoFocus
+         />
+         <button type="submit">Send</button>
+       </form>
        </div>
      </div>
    );
@@ -218,3 +219,5 @@ function App() {
 
 
 export default App;
+
+

@@ -23,8 +23,8 @@ function App() {
   const chatContainerRef = useRef(null);
   
   useEffect(() => {
-    const handleMessage = ({ username, message }) => {
-      setChat((prevChat) => [...prevChat, { username, message }]);
+    const handleMessage = ({ username, message, recipient }) => {
+      setChat((prevChat) => [...prevChat, { username, message, recipient }]);
     };
 
     socket.on('message', handleMessage);
@@ -46,25 +46,34 @@ function App() {
     if (user) {
       setIsLoggedIn(true);
       setUserPermissions(user.permissions);
+      socket.emit('register', username); // Register the username with the server
     } else {
       alert('Not registered: Please contact Ronit Parikh to get this issue resolved.');
     }
   };
+  
 
   const sendMessage = (e) => {
     e.preventDefault();
     if (message.trim()) {
-      socket.emit('message', { username, message });
+      const recipient = message.startsWith('@')
+        ? message.split(' ')[0].slice(1)
+        : null;
+      socket.emit('message', { username, message, recipient });
       setMessage('');  // Clear the message after sending
     }
   };
 
   const ChatRoom = () => {
+    const filteredChat = chat.filter(({ username: msgUsername, recipient }) => {
+      return !recipient || recipient === username || msgUsername === username;
+    });
+
     return (
       <div>
         <h1>General Chat Room</h1>
         <div className="chat-container" ref={chatContainerRef}>
-          {chat.map((payload, index) => (
+          {filteredChat.map((payload, index) => (
             <p
               key={index}
               className={payload.username === username ? 'user-message' : 'other-message'}
@@ -105,7 +114,6 @@ function App() {
                   </p>
                   <div className="button-container">
                     <a href="/chat"><button>Home</button></a>
-
                   </div>
                 </div>
               </div>
@@ -137,7 +145,6 @@ function App() {
               )
             }
           />
-          
           <Route
             path="/about"
             element={

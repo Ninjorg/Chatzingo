@@ -42,12 +42,12 @@ function App() {
 
 
    socket.on('message', handleMessage);
-   socket.on('user-update', handleUserUpdate);
+   socket.on('activeUsers', handleUserUpdate); // Correct event name
 
 
    return () => {
      socket.off('message', handleMessage);
-     socket.off('user-update', handleUserUpdate);
+     socket.off('activeUsers', handleUserUpdate);
    };
  }, []);
 
@@ -104,7 +104,7 @@ function App() {
              onClick={() => setSelectedUser(null)}
              className={!selectedUser ? 'active' : ''}
            >
-             #General Chat {onlineUsers.includes('General Chat') && <span className="green-dot"></span>}
+             #General Chat {onlineUsers.includes(null) && <span className="green-dot"></span>}
            </li>
            {validUsers
              .filter(user => user.username !== username)

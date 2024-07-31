@@ -4,8 +4,10 @@ import io from 'socket.io-client';
 import Navbar from './navbar';
 import './index.css';
 
+// Initialize socket connection
 const socket = io.connect('http://localhost:4000');
 
+// Sample valid users for authentication
 const validUsers = [
   { username: 'user1', password: 'pass1', permissions: ['general'] },
   { username: 'user2', password: 'pass2', permissions: ['general'] },
@@ -25,6 +27,7 @@ function App() {
   const [unreadMessages, setUnreadMessages] = useState({});
   const chatContainerRef = useRef(null);
 
+  // Handle socket events and chat scroll
   useEffect(() => {
     const handleMessage = ({ username, message, recipient, type }) => {
       setChat((prevChat) => [...prevChat, { username, message, recipient, type }]);
@@ -70,7 +73,7 @@ function App() {
       setUserPermissions(user.permissions);
       socket.emit('register', username);
     } else {
-      alert('Not registered: Please contact Ronit Parikh to get this issue resolved.');
+      alert('Invalid credentials. Please try again.');
     }
   };
 
@@ -140,9 +143,9 @@ function App() {
     });
 
     return (
-      <div style={{ display: 'flex' }}>
+      <div className="chat-room">
         <div className="sidebar">
-          <h2>YOUR CHANNELS:</h2>
+          <h2>Your Channels:</h2>
           <ul>
             <li
               onClick={() => setSelectedUser(null)}
@@ -207,7 +210,7 @@ function App() {
         <Routes>
           <Route path="/" element={
             !isLoggedIn ? (
-              <form onSubmit={handleLogin}>
+              <form onSubmit={handleLogin} className="login-form">
                 <label>
                   Username:
                   <input
